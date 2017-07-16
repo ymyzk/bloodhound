@@ -46,6 +46,7 @@ module Database.Bloodhound.Client
        , deleteMapping
        -- ** Documents
        , indexDocument
+       , indexDocumentWithAutoId
        , updateDocument
        , getDocument
        , documentExists
@@ -798,6 +799,18 @@ indexDocument (IndexName indexName)
   (MappingName mappingName) cfg document (DocId docId) =
   bindM2 put url (return body)
   where url = addQuery params <$> joinPath [indexName, mappingName, docId]
+        parentParams = case idsParent cfg of
+          Nothing -> []
+          Just (DocumentParent (DocId p)) -> [ ("parent", Just p) ]
+        params = versionCtlParams cfg ++ parentParams
+        body = Just (encode document)
+
+indexDocumentWithAutoId :: (ToJSON doc, MonadBH m) => IndexName -> MappingName
+                 -> IndexDocumentSettings -> doc -> m Reply
+indexDocumentWithAutoId (IndexName indexName)
+  (MappingName mappingName) cfg document =
+  bindM2 post url (return body)
+  where url = addQuery params <$> joinPath [indexName, mappingName]
         parentParams = case idsParent cfg of
           Nothing -> []
           Just (DocumentParent (DocId p)) -> [ ("parent", Just p) ]
